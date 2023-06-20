@@ -1,0 +1,98 @@
+SELECT *
+FROM doctor
+WHERE specialization = 'Cardiology' AND (rating > 4.5 OR address = 'New York')
+ORDER BY rating DESC;
+
+
+SELECT lastname, rating * 0.1 AS in_10_ratig
+FROM public.doctor;
+
+
+SELECT p.lastname, p.firstname, d.specialization, dg.disease_id, di.name
+FROM public.patient p
+JOIN public.diagnosis dg ON p.id = dg.patient_id
+JOIN public.disease di ON dg.disease_id = di.id
+JOIN public.doctor d ON dg.doctor_id = d.id
+WHERE (p.lastname = 'Smith' OR p.lastname = 'Johnson')
+  AND d.specialization = 'Cardiology'
+ORDER BY p.lastname ASC;
+
+
+SELECT p.lastname, d.specialization
+FROM public.patient p
+LEFT JOIN public.diagnosis dg ON p.id = dg.patient_id
+LEFT JOIN public.doctor d ON dg.doctor_id = d.id;
+
+
+SELECT *
+FROM public.patient
+WHERE lastname LIKE 'Sm%';
+
+SELECT *
+FROM public.doctor
+WHERE rating BETWEEN 18 AND 30;
+
+SELECT *
+FROM public.patient
+WHERE address IN ('New York', 'Los Angeles', 'Chicago');
+
+SELECT *
+FROM public.patient p
+WHERE EXISTS (
+    SELECT 1
+    FROM public.diagnosis d
+    WHERE d.disease_id = p.id 
+);
+
+SELECT *
+FROM public.doctor
+WHERE rating > ALL (
+    SELECT rating
+    FROM public.doctor
+    WHERE address = 'New York'
+);
+
+
+
+SELECT *
+FROM public.doctor
+WHERE rating <= ANY (
+    SELECT rating
+    FROM public.doctor
+    WHERE address = 'New York'
+);
+
+
+SELECT doctor_id, COUNT(*) AS patient_count
+FROM treatment
+GROUP BY doctor_id;
+
+SELECT *
+FROM patient
+WHERE id IN (
+  SELECT patient_id
+  FROM diagnosis
+  WHERE disease_id = 1
+);
+
+
+SELECT patient.name, subquery.total
+FROM (
+  SELECT patient_id, COUNT(*) AS total
+  FROM public.diagnosis
+  GROUP BY patient_id
+) AS subquery
+JOIN public.patient ON public.patient.id = subquery.patient_id;
+
+
+SELECT
+  p.lastname || ' ' || p.firstname AS patient_name,
+  t.treatment_start_date,
+  t.treatment_end_date,
+  d.lastname AS doctor_name
+FROM
+  public.patient p
+  INNER JOIN public.treatment t ON p.id = t.patient_id
+  INNER JOIN public.doctor d ON d.id = t.doctor_id
+ORDER BY
+  p.lastname, p.firstname, t.treatment_start_date;
