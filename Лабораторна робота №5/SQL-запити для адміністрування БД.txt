@@ -1,0 +1,76 @@
+-- Створення користувача patient
+CREATE USER patient;
+
+-- Створення користувача doctor
+CREATE USER doctor;
+
+-- Створення користувача admin
+CREATE USER admin;
+
+-- Надання привілею SELECT на таблицю public.treatment користувачу patient
+GRANT SELECT ON public.treatment TO patient;
+
+-- Надання привілею INSERT, UPDATE, DELETE на таблицю public.patient, public.diagnosis, public.treatment користувачу doctor
+GRANT INSERT, UPDATE, DELETE ON public.treatment TO doctor;
+
+-- Надання привілею SELECT, INSERT, UPDATE, DELETE на всі таблиці користувачу admin
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO admin;
+
+
+-- Створення ролі admin
+CREATE ROLE admins;
+
+-- Створення ролі doctors
+CREATE ROLE doctors;
+
+-- Створення ролі patients	
+CREATE ROLE patients;
+
+
+-- Надання привілею SELECT на таблицю public.doctor ролі patients
+GRANT SELECT ON public.patient TO patients;
+
+-- Надання привілею INSERT, UPDATE, DELETE на таблицю public.prescription ролі doctors
+GRANT INSERT, UPDATE, DELETE ON public.prescription TO doctors;
+
+-- Надання привілею SELECT, INSERT, UPDATE, DELETE на всі таблиці ролі admins
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO admins;
+
+
+-- Призначення ролі patients користувачу patient
+GRANT patients TO patient;
+
+-- Призначення ролі role2 користувачу user2
+GRANT doctors TO doctor;
+
+-- Призначення ролей role1 і role2 користувачу user3
+GRANT patients, doctors TO admin;
+
+
+-- Відкликання привілею SELECT на таблицю public.treatment у користувача patient
+REVOKE SELECT ON public.treatment FROM patient;
+
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM admin;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM admins;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM doctor;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM doctors;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM patient;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM patients;
+
+-- Видалення ролі admin
+DROP ROLE admins;
+
+-- Видалення ролі doctors
+DROP ROLE doctors;
+
+-- Видалення ролі patients
+DROP ROLE patients;
+
+-- Видалення користувача admin
+DROP USER admin;
+
+-- Видалення користувача doctor
+DROP USER doctor;
+
+-- Видалення користувача patient
+DROP USER patient;
