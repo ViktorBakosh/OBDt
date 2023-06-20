@@ -1,0 +1,84 @@
+-- FUNCTION: public.check_doctor_patient_limit()
+
+-- DROP FUNCTION IF EXISTS public.check_doctor_patient_limit();
+
+CREATE OR REPLACE FUNCTION public.check_doctor_patient_limit()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF
+AS $BODY$
+DECLARE
+  patient_count INTEGER;
+BEGIN
+  -- GET COUNT OF PATIENTS OF THE DOCTOR
+  SELECT COUNT(*) INTO patient_count
+  FROM public.treatment
+  WHERE doctor_id = NEW.doctor_id;
+
+  -- CHECK IF IT'S MEET CONDITION
+  IF patient_count >= 10 THEN
+    RAISE EXCEPTION 'The doctor already has the maximum number of patients';
+  END IF;
+
+  RETURN NEW;
+END;
+$BODY$;
+
+ALTER FUNCTION public.check_doctor_patient_limit()
+    OWNER TO postgres;
+
+-- Trigger: check_doctor_patient_limit_trigger
+
+-- DROP TRIGGER IF EXISTS check_doctor_patient_limit_trigger ON public.treatment;
+
+CREATE TRIGGER check_doctor_patient_limit_trigger
+    BEFORE INSERT
+    ON public.treatment
+    FOR EACH ROW
+    EXECUTE FUNCTION public.check_doctor_patient_limit();
+
+
+-- FUNCTION: public.check_patient_contraindications()
+
+-- DROP FUNCTION IF EXISTS public.check_patient_contraindications();
+
+CREATE OR REPLACE FUNCTION public.check_patient_contraindications()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF
+AS $BODY$
+DECLARE
+    contraindication_exists INTEGER;
+BEGIN
+    -- ѕерев≥рка на€вност≥ протипоказань у пац≥Їнта
+    SELECT COUNT(*) INTO contraindication_exists
+    FROM public.patient p
+    JOIN public.contraindications c ON p.contraindications = c.id
+    JOIN public.medicine m ON NEW.medicine_id = m.id
+    JOIN public.complexmedicine cm ON m.complexmedicine_id = cm.id
+    WHERE p.id = NEW.patient_id
+    AND (c.id = cm.id OR cm.name ILIKE '%' || c.name || '%');
+
+    -- якщо знайдено протипоказанн€, видаЇмо помилку
+    IF contraindication_exists > 0 THEN
+        RAISE EXCEPTION 'Patient has contraindications for the prescribed medicine';
+    END IF;
+
+    RETURN NEW;
+END;
+$BODY$;
+
+ALTER FUNCTION public.check_patient_contraindications()
+    OWNER TO postgres;
+
+-- Trigger: check_patient_contraindications_trigger
+
+-- DROP TRIGGER IF EXISTS check_patient_contraindications_trigger ON public.prescription;
+
+CREATE TRIGGER check_patient_contraindications_trigger
+    BEFORE INSERT
+    ON public.prescription
+    FOR EACH ROW
+    EXECUTE FUNCTION public.check_patient_contraindications();
