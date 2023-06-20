@@ -1,0 +1,70 @@
+-- PROCEDURE: public.calculate_doctor_rating(integer)
+
+-- DROP PROCEDURE IF EXISTS public.calculate_doctor_rating(integer);
+
+CREATE OR REPLACE PROCEDURE public.calculate_doctor_rating(
+	IN p_doctor_id integer)
+LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+    total_patients INTEGER;
+    total_treatment_duration INTERVAL;
+    total_effectiveness NUMERIC;
+    total_contraindications INTEGER;
+BEGIN
+    total_patients := 0;
+    total_treatment_duration := INTERVAL '0';
+    total_effectiveness := 0;
+    total_contraindications := 0;
+    
+    -- Calculate the total patients, treatment duration, effectiveness, and contraindications for the doctor
+    SELECT COUNT(DISTINCT t.patient_id), SUM(t.treatment_end_date - t.treatment_start_date), SUM(t.treatmentrating), COUNT(DISTINCT p.contraindications)
+    INTO total_patients, total_treatment_duration, total_effectiveness, total_contraindications
+    FROM public.treatment t
+    JOIN public.patient p ON t.patient_id = p.id
+    WHERE t.doctor_id = p_doctor_id;
+    
+    -- Calculate the average treatment duration and effectiveness
+    IF total_patients > 0 THEN
+        total_treatment_duration := total_treatment_duration / total_patients;
+        total_effectiveness := total_effectiveness / total_patients;
+    END IF;
+    
+    -- Calculate the rating based on the custom algorithm and update the doctor table
+    UPDATE public.doctor
+    SET rating = (
+        total_patients * 0.3 +
+        EXTRACT(EPOCH FROM total_treatment_duration) * 0.2 +
+        total_effectiveness * 0.3 -
+        total_contraindications * 0.2
+    )
+    WHERE id = p_doctor_id;
+END;
+$BODY$;
+ALTER PROCEDURE public.calculate_doctor_rating(integer)
+    OWNER TO postgres;
+
+
+-- PROCEDURE: public.calculate_all_doctor_ratings()
+
+-- DROP PROCEDURE IF EXISTS public.calculate_all_doctor_ratings();
+
+CREATE OR REPLACE PROCEDURE public.calculate_all_doctor_ratings(
+	)
+LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+    doctor_id INTEGER;
+BEGIN
+    -- Loop through each doctor and calculate the rating
+    FOR doctor_id IN SELECT id FROM public.doctor
+    LOOP
+        call calculate_doctor_rating(doctor_id);
+    END LOOP;
+    
+    -- Output a message indicating the completion of the calculation
+    RAISE NOTICE 'Ratings calculation completed for all doctors.';
+END;
+$BODY$;
+ALTER PROCEDURE public.calculate_all_doctor_ratings()
+    OWNER TO postgres;
